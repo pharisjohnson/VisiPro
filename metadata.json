@@ -1,0 +1,5 @@
+{
+  "name": "Visitor Management Super App",
+  "description": "An all-in-one application for businesses to efficiently track and manage visitors, including walk-ins and pre-scheduled appointments. Features a real-time dashboard, an appointment scheduler, and an AI assistant powered by Gemini.",
+  "requestFramePermissions": []
+}
