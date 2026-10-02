@@ -275,9 +275,17 @@ describe("appointments", () => {
 });
 
 describe("guard rail: the tenancy wrapper can't be bypassed", () => {
-  // Raw `query`/`mutation`/`action` builders skip the org + role check. Only
-  // these files may use them.
-  const ALLOWED = new Set(["members.ts", "ai.ts", path.join("lib", "tenancy.ts")]);
+  // Raw PUBLIC builders (`query`/`mutation`/`action`/`httpAction`) skip the org +
+  // role check. Only these files may use them. `internal*` functions can't be
+  // called by clients, so they're fine anywhere.
+  const ALLOWED = new Set([
+    "members.ts", // me + ensure: run before a member row exists
+    "ai.ts", // action; its data comes from the admin-only org-pinned aiContext.get
+    "kiosk.ts", // public self-check-in; org comes only from the secret token
+    "kioskAdmin.ts", // action; verifies admin via settings.getAdmin
+    "http.ts", // Clerk webhook; Svix-signature verified
+    path.join("lib", "tenancy.ts"),
+  ]);
 
   const walk = (dir: string): string[] =>
     fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
@@ -292,7 +300,7 @@ describe("guard rail: the tenancy wrapper can't be bypassed", () => {
       .filter((f) => !ALLOWED.has(path.relative(root, f)))
       .filter((f) => {
         const src = fs.readFileSync(f, "utf8");
-        return /import\s*\{[^}]*\b(query|mutation|action|internalQuery|internalMutation|internalAction|httpAction)\b[^}]*\}\s*from\s*["'](\.\.?\/)+(_generated\/server|convex\/server)["']/.test(src);
+        return /import\s*\{[^}]*\b(query|mutation|action|httpAction)\b[^}]*\}\s*from\s*["'](\.\.?\/)+(_generated\/server|convex\/server)["']/.test(src);
       })
       .map((f) => path.relative(root, f));
     expect(offenders).toEqual([]);

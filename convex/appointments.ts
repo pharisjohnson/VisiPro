@@ -1,6 +1,8 @@
 import { v } from "convex/values";
 import { fail, notify, orgMutation, orgQuery } from "./lib/tenancy";
 import { clean, required } from "./lib/validation";
+import { enqueueSms, formatLocal, normalizePhone, sanitizeForSms } from "./lib/sms";
+import { loadSettings } from "./lib/settings";
 
 const CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no 0/O/1/I to avoid misreads at the gate
 
@@ -46,8 +48,14 @@ export const create = orgMutation()({
     hostName: v.string(),
     hostUserId: v.optional(v.string()),
     scheduledTime: v.number(),
+    visitorPhone: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    let visitorPhone: string | undefined;
+    const rawPhone = clean(args.visitorPhone, 30, "Phone number");
+    if (rawPhone) {
+      visitorPhone = normalizePhone(rawPhone) ?? fail("Enter a valid phone number for the visitor");
+    }
     const visitorName = required(clean(args.visitorName, 120, "Visitor name"), "Visitor name");
     const visitorCompany = clean(args.visitorCompany, 120, "Company");
     let hostName = required(clean(args.hostName, 120, "Host"), "Host");
@@ -92,6 +100,7 @@ export const create = orgMutation()({
       hostName,
       hostUserId,
       scheduledTime: args.scheduledTime,
+      visitorPhone,
       checkInCode,
       status: "scheduled",
       createdBy: ctx.member.userId,
@@ -109,6 +118,19 @@ export const create = orgMutation()({
         admins.map((a) => a.userId),
         `${ctx.member.name} scheduled an appointment for ${visitorName}.`,
       );
+    }
+
+    // Text the visitor their code and when/where to arrive.
+    if (visitorPhone) {
+      const { settings } = await loadSettings(ctx, ctx.orgId);
+      if (settings.smsVisitorCode) {
+        const place = settings.companyName ? ` at ${sanitizeForSms(settings.companyName, 40)}` : "";
+        await enqueueSms(ctx, ctx.orgId, {
+          to: visitorPhone,
+          message: `Hi ${sanitizeForSms(visitorName.split(" ")[0], 30)}, your visit${place} with ${sanitizeForSms(hostName, 40)} is on ${formatLocal(args.scheduledTime, settings.utcOffsetMinutes)}. Check-in code: ${checkInCode}`,
+          kind: "visitor_code",
+        });
+      }
     }
     return { id, checkInCode, hostName };
   },

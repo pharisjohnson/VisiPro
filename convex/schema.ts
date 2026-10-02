@@ -22,6 +22,7 @@ export default defineSchema({
     name: v.string(),
     email: v.string(),
     photoUrl: v.optional(v.string()),
+    phone: v.optional(v.string()), // E.164, for SMS alerts
     role: roleValidator,
   })
     .index("by_org", ["orgId"])
@@ -38,11 +39,14 @@ export default defineSchema({
     checkOutTime: v.optional(v.number()),
     status: v.union(v.literal("in"), v.literal("out")),
     appointmentId: v.optional(v.id("appointments")),
-    checkedInBy: v.string(), // member userId
+    checkedInBy: v.string(), // member userId, or "kiosk"
+    source: v.optional(v.union(v.literal("staff"), v.literal("kiosk"))),
+    autoCheckedOut: v.optional(v.boolean()),
     extraData,
   })
     .index("by_org_time", ["orgId", "checkInTime"])
     .index("by_org_status", ["orgId", "status"])
+    .index("by_status_time", ["status", "checkInTime"])
     .index("by_org_host_status", ["orgId", "hostUserId", "status"]),
 
   appointments: defineTable({
@@ -52,6 +56,7 @@ export default defineSchema({
     hostName: v.string(),
     hostUserId: v.optional(v.string()),
     scheduledTime: v.number(), // epoch ms
+    visitorPhone: v.optional(v.string()), // E.164, to SMS the check-in code
     checkInCode: v.string(),
     status: v.union(
       v.literal("scheduled"),
@@ -70,10 +75,12 @@ export default defineSchema({
     checkInTime: v.number(),
     checkOutTime: v.optional(v.number()),
     status: v.union(v.literal("in"), v.literal("out")),
+    autoCheckedOut: v.optional(v.boolean()),
     extraData,
   })
     .index("by_org_time", ["orgId", "checkInTime"])
-    .index("by_org_status", ["orgId", "status"]),
+    .index("by_org_status", ["orgId", "status"])
+    .index("by_status_time", ["status", "checkInTime"]),
 
   customFields: defineTable({
     orgId: v.string(),
@@ -97,4 +104,36 @@ export default defineSchema({
     message: v.string(),
     read: v.boolean(),
   }).index("by_org_user", ["orgId", "userId"]),
+
+  // One row per organization. Created on first member bootstrap; absent rows fall back to DEFAULT_SETTINGS.
+  orgSettings: defineTable({
+    orgId: v.string(),
+    companyName: v.string(),
+    utcOffsetMinutes: v.number(), // used to print local times in SMS (no tz database in the runtime)
+    autoCheckoutHours: v.number(), // 0 = off
+    smsHostOnArrival: v.boolean(),
+    smsVisitorCode: v.boolean(),
+    kioskToken: v.optional(v.string()), // secret in the public self-check-in URL; absent = kiosk disabled
+  })
+    .index("by_org", ["orgId"])
+    .index("by_kiosk_token", ["kioskToken"]),
+
+  // Every SMS we send (or tried to), for audit, retries and the per-org daily cap.
+  smsOutbox: defineTable({
+    orgId: v.string(),
+    to: v.string(),
+    message: v.string(),
+    kind: v.union(v.literal("host_arrival"), v.literal("visitor_code")),
+    status: v.union(v.literal("queued"), v.literal("sent"), v.literal("failed")),
+    attempts: v.number(),
+    error: v.optional(v.string()),
+  }).index("by_org", ["orgId"]),
+
+  // Fixed-window counters for abuse/cost control (kiosk submissions, SMS per day).
+  rateLimits: defineTable({
+    orgId: v.string(),
+    key: v.string(),
+    windowStart: v.number(),
+    count: v.number(),
+  }).index("by_org_key", ["orgId", "key"]),
 });
