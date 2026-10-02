@@ -46,6 +46,11 @@ export const ensure = mutation({
     const { identity, orgId, clerkOrgRole } = await requireIdentity(ctx);
     const name = clean(args.name, 120, "Name") || "User";
     const email = clean(args.email, 200, "Email");
+    // Shown to teammates as <img src>, so only accept plain https URLs.
+    const photoUrl =
+      args.photoUrl && args.photoUrl.length <= 500 && /^https:\/\//.test(args.photoUrl)
+        ? args.photoUrl
+        : undefined;
     const existing = await ctx.db
       .query("members")
       .withIndex("by_org_user", (q) =>
@@ -56,9 +61,9 @@ export const ensure = mutation({
       if (
         existing.name !== name ||
         existing.email !== email ||
-        existing.photoUrl !== args.photoUrl
+        existing.photoUrl !== photoUrl
       ) {
-        await ctx.db.patch(existing._id, { name, email, photoUrl: args.photoUrl });
+        await ctx.db.patch(existing._id, { name, email, photoUrl });
       }
       return existing._id;
     }
@@ -67,7 +72,7 @@ export const ensure = mutation({
       userId: identity.subject,
       name,
       email,
-      photoUrl: args.photoUrl,
+      photoUrl,
       role: clerkOrgRole?.endsWith("admin") ? "admin" : "host",
     });
   },

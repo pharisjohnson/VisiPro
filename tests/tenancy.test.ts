@@ -58,6 +58,17 @@ describe("member bootstrap", () => {
     expect(me?.name).toBe("New Name");
   });
 
+  test("only plain https photo URLs are stored", async () => {
+    const t = setup();
+    const u = await signIn(t, "orgA", "u1");
+    for (const bad of ["javascript:alert(1)", "http://x.com/a.png", "data:image/png;base64,AAAA", "https://x.com/" + "a".repeat(600)]) {
+      await u.mutation(api.members.ensure, { name: "U", email: "u@x.com", photoUrl: bad });
+      expect((await u.query(api.members.me, {}))?.photoUrl).toBeUndefined();
+    }
+    await u.mutation(api.members.ensure, { name: "U", email: "u@x.com", photoUrl: "https://img.clerk.com/a.png" });
+    expect((await u.query(api.members.me, {}))?.photoUrl).toBe("https://img.clerk.com/a.png");
+  });
+
   test("an organization cannot lose its last admin", async () => {
     const t = setup();
     const admin = await signIn(t, "orgA", "u1", { role: "admin" });

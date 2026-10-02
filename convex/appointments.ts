@@ -110,7 +110,7 @@ export const create = orgMutation()({
         `${ctx.member.name} scheduled an appointment for ${visitorName}.`,
       );
     }
-    return { id, checkInCode };
+    return { id, checkInCode, hostName };
   },
 });
 

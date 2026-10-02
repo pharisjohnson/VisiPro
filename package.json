@@ -1,5 +1,5 @@
 {
-  "name": "visitor-management-super-app",
+  "name": "visipro",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -23,6 +23,8 @@
   "devDependencies": {
     "@edge-runtime/vm": "^5.0.0",
     "@types/node": "^22.14.0",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^5.0.0",
     "autoprefixer": "^10.6.1",
     "convex-test": "^0.0.60",
