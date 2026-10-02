@@ -76,6 +76,8 @@ cp .env.example .env.local   # fill in VITE_CONVEX_URL and VITE_CLERK_PUBLISHABL
 npm run dev                  # http://localhost:3000
 ```
 
+Run `npm run doctor` any time: it checks `.env.local`, works out your Clerk issuer URL from the publishable key, and prints the exact `npx convex env set` commands still needed.
+
 Sign up, create an organization, and you're its admin. Invite colleagues from **Admin Settings → Team**, then set their role (Guard / Host).
 
 ### Self check-in link

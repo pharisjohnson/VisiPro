@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit && tsc --noEmit -p convex",
     "test": "vitest run",
     "convex:dev": "convex dev",
-    "convex:deploy": "convex deploy"
+    "convex:deploy": "convex deploy",
+    "doctor": "node scripts/doctor.mjs"
   },
   "dependencies": {
     "@clerk/clerk-react": "^5.61.10",
