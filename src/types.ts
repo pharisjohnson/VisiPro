@@ -26,6 +26,7 @@ export interface Member {
   email: string;
   role: Role;
   photoUrl?: string;
+  phone?: string;
 }
 export type User = Member;
 
@@ -39,6 +40,8 @@ export interface Visitor {
   checkInTime: Date;
   checkOutTime?: Date;
   status: VisitorStatus;
+  source?: 'staff' | 'kiosk';
+  autoCheckedOut?: boolean;
   extraData: Record<string, string>;
 }
 
@@ -50,6 +53,7 @@ export interface Appointment {
   hostUserId?: string;
   scheduledTime: Date;
   checkInCode: string;
+  visitorPhone?: string;
   status: 'scheduled' | 'arrived' | 'cancelled';
 }
 
@@ -59,6 +63,7 @@ export interface Employee {
   checkInTime: Date;
   checkOutTime?: Date;
   status: EmployeeStatus;
+  autoCheckedOut?: boolean;
   extraData: Record<string, string>;
 }
 

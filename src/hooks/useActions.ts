@@ -26,6 +26,7 @@ export function useActions() {
     const postAnnouncement = useMutation(api.announcements.post);
     const setMemberRole = useMutation(api.members.setRole);
     const markNotificationRead = useMutation(api.notifications.markRead);
+    const setMemberPhone = useMutation(api.members.setPhone);
 
     const run = async (fn: () => Promise<unknown>, success?: string): Promise<boolean> => {
         try {
@@ -49,6 +50,7 @@ export function useActions() {
         removeCustomField: (id: string) => run(() => removeCustomField({ id: id as Id<'customFields'> })),
         addAnnouncement: (a: { title: string; content: string }) => run(() => postAnnouncement(a), 'Announcement posted.'),
         setRole: (memberId: string, role: Role) => run(() => setMemberRole({ memberId: memberId as Id<'members'>, role: ROLE_TO_DB[role] }), 'Role updated.'),
+        setPhone: (memberId: string, phone: string) => run(() => setMemberPhone({ memberId: memberId as Id<'members'>, phone }), phone.trim() ? 'Phone number saved.' : 'Phone number removed.'),
         markNotificationRead: (id: string) => run(() => markNotificationRead({ id: id as Id<'notifications'> })),
         /** Resolves to the created appointment (for the confirmation modal), or null on failure. */
         addAppointment: async (a: NewAppointment): Promise<Appointment | null> => {
@@ -60,6 +62,7 @@ export function useActions() {
                     visitorCompany: a.visitorCompany.trim(),
                     host: created.hostName,
                     hostUserId: a.hostUserId,
+                    visitorPhone: a.visitorPhone,
                     scheduledTime: new Date(a.scheduledTime),
                     checkInCode: created.checkInCode,
                     status: 'scheduled',

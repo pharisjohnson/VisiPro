@@ -12,13 +12,14 @@ export const AppointmentConfirmationModal: React.FC<AppointmentConfirmationModal
     <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50">
         <div className="bg-white rounded-lg p-8 w-full max-w-lg text-center shadow-2xl">
             <h2 className="text-2xl font-bold text-green-600 mb-4">Appointment Scheduled!</h2>
-            <p className="text-gray-600 mb-6">Give your visitor this code. They show it at the gate to check in.</p>
+            <p className="text-gray-600 mb-6">Give your visitor this code. They show it at the gate to check in{appointment.visitorPhone ? ", and we'll text it to them too (if SMS is on)" : ''}.</p>
 
             <div className="bg-gray-50 p-6 rounded-lg mb-6 text-left space-y-2">
                 <p><strong className="w-28 inline-block">Visitor:</strong> {appointment.visitorName}</p>
                 <p><strong className="w-28 inline-block">Company:</strong> {appointment.visitorCompany || '—'}</p>
                 <p><strong className="w-28 inline-block">Host:</strong> {appointment.host}</p>
                 <p><strong className="w-28 inline-block">Time:</strong> {appointment.scheduledTime.toLocaleString()}</p>
+                {appointment.visitorPhone && <p><strong className="w-28 inline-block">Phone:</strong> {appointment.visitorPhone}</p>}
             </div>
 
             <div className="text-center">
@@ -39,6 +40,7 @@ export interface NewAppointment {
     hostName: string;
     hostUserId?: string;
     scheduledTime: number;
+    visitorPhone?: string;
 }
 interface AppointmentSchedulerProps {
     addAppointment: (appointment: NewAppointment) => Promise<boolean>;
@@ -52,6 +54,7 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({ addA
     const [visitorCompany, setVisitorCompany] = useState('');
     const [host, setHost] = useState(isHost ? currentUser.name : '');
     const [scheduledTime, setScheduledTime] = useState('');
+    const [visitorPhone, setVisitorPhone] = useState('');
     const [saving, setSaving] = useState(false);
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -68,6 +71,7 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({ addA
             hostName: host,
             hostUserId: isHost ? currentUser.userId : match?.userId,
             scheduledTime: localInputToMs(scheduledTime),
+            visitorPhone: visitorPhone.trim() || undefined,
         });
         setSaving(false);
         if (ok) {
@@ -75,6 +79,7 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({ addA
             setVisitorCompany('');
             if (!isHost) setHost('');
             setScheduledTime('');
+            setVisitorPhone('');
         }
     };
 
@@ -90,6 +95,10 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({ addA
                 <div>
                     <label htmlFor="visitorCompany" className="block text-sm font-medium text-gray-700">Visitor's Company</label>
                     <input type="text" id="visitorCompany" value={visitorCompany} onChange={(e) => setVisitorCompany(e.target.value)} className={field} />
+                </div>
+                <div>
+                    <label htmlFor="visitorPhone" className="block text-sm font-medium text-gray-700">Visitor's mobile <span className="text-gray-400 font-normal">(optional, we'll text them the code)</span></label>
+                    <input type="tel" id="visitorPhone" value={visitorPhone} onChange={(e) => setVisitorPhone(e.target.value)} placeholder="0712 345 678" className={field} />
                 </div>
                 <div>
                     <label htmlFor="host" className="block text-sm font-medium text-gray-700">Host / Employee *</label>

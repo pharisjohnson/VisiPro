@@ -17,6 +17,10 @@ import { EmployeeLog, LogsPage } from './components/Logs';
 import { AppointmentConfirmationModal, AppointmentScheduler } from './components/Schedule';
 import { AdminPanel } from './components/Admin';
 import { AIAssistant } from './components/AIAssistant';
+import { BadgeModal, badgePromptEnabled } from './components/Badge';
+import type { BadgeData } from './components/Badge';
+import { ProfilePhone } from './components/ProfilePhone';
+import type { NewVisitor } from './components/CheckIn';
 
 const Centered: React.FC<{ children: React.ReactNode }> = ({ children }) => (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 p-6 text-center">{children}</div>
@@ -51,6 +55,7 @@ const ChooseOrganization: React.FC = () => (
 /** Creates the caller's member record on first visit, then renders the workspace. */
 const Bootstrap: React.FC = () => {
     const { user } = useUser();
+    const { organization } = useOrganization();
     const ensure = useMutation(api.members.ensure);
     const me = useQuery(api.members.me);
     const [error, setError] = useState<string | null>(null);
@@ -62,8 +67,9 @@ const Bootstrap: React.FC = () => {
             name: user.fullName || user.primaryEmailAddress?.emailAddress || 'User',
             email: user.primaryEmailAddress?.emailAddress ?? '',
             photoUrl: user.imageUrl,
+            orgName: organization?.name,
         }).catch((e) => setError(errorMessage(e)));
-    }, [user?.id, user?.fullName, user?.imageUrl, ensure]);
+    }, [user?.id, user?.fullName, user?.imageUrl, organization?.name, ensure]);
 
     if (error) {
         return (
@@ -83,6 +89,7 @@ const Workspace: React.FC<{ me: ReturnType<typeof toMember> }> = ({ me }) => {
     const online = useOnline();
     const [view, setView] = useState<View>('dashboard');
     const [newAppointment, setNewAppointment] = useState<Appointment | null>(null);
+    const [badge, setBadge] = useState<{ data: BadgeData; justCheckedIn: boolean } | null>(null);
 
     const isAdmin = me.role === Role.ADMIN;
     const isStaff = me.role === Role.ADMIN || me.role === Role.GUARD;
@@ -100,6 +107,7 @@ const Workspace: React.FC<{ me: ReturnType<typeof toMember> }> = ({ me }) => {
     }, [dayStart]);
 
     // Role-scoped live queries. The server enforces the same rules; "skip" just avoids calls we know would be refused.
+    const settings = useQuery(api.settings.get);
     const membersDocs = useQuery(api.members.list);
     const fieldDocs = useQuery(api.customFields.list);
     const announcementDocs = useQuery(api.announcements.list);
@@ -143,6 +151,21 @@ const Workspace: React.FC<{ me: ReturnType<typeof toMember> }> = ({ me }) => {
         });
     }, [weekVisitors, dayStart]);
 
+    const companyName = settings?.companyName ?? '';
+    const badgeFor = (v: { name: string; company: string; host: string; purpose: string; checkInTime: Date }): BadgeData => ({
+        name: v.name, company: v.company, host: v.host, purpose: v.purpose, checkInTime: v.checkInTime, companyName,
+    });
+    const handleAddVisitor = async (v: NewVisitor) => {
+        const ok = await actions.addVisitor(v);
+        if (ok && badgePromptEnabled()) {
+            setBadge({
+                justCheckedIn: true,
+                data: badgeFor({ name: v.name.trim(), company: v.company.trim(), host: v.hostName.trim(), purpose: v.purpose, checkInTime: new Date() }),
+            });
+        }
+        return ok;
+    };
+
     const handleAddAppointment = async (a: Parameters<typeof actions.addAppointment>[0]) => {
         const created = await actions.addAppointment(a);
         if (created) setNewAppointment(created);
@@ -184,7 +207,7 @@ const Workspace: React.FC<{ me: ReturnType<typeof toMember> }> = ({ me }) => {
             case 'checkin':
                 return (
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                        <AppointmentCheckInTerminal addVisitor={actions.addVisitor} customFields={visitorFields} appointments={expected} members={members} />
+                        <AppointmentCheckInTerminal addVisitor={handleAddVisitor} customFields={visitorFields} appointments={expected} members={members} />
                         <CheckOutTerminal visitors={onPremise} checkOutVisitor={actions.checkOutVisitor} />
                     </div>
                 );
@@ -213,6 +236,7 @@ const Workspace: React.FC<{ me: ReturnType<typeof toMember> }> = ({ me }) => {
                         visitorCustomFields={visitorFields}
                         employeeCustomFields={employeeFields}
                         currentUser={me}
+                        onPrintBadge={(v) => setBadge({ justCheckedIn: false, data: badgeFor({ name: v.name, company: v.company, host: v.host, purpose: v.purpose, checkInTime: v.checkInTime }) })}
                     />
                 );
             case 'admin':
@@ -230,12 +254,18 @@ const Workspace: React.FC<{ me: ReturnType<typeof toMember> }> = ({ me }) => {
             case 'ai':
                 return <AIAssistant />;
             case 'profile':
-                return <div className="flex justify-center"><UserProfile routing="virtual" /></div>;
+                return (
+                    <div className="flex flex-col items-center gap-6">
+                        <ProfilePhone me={me} setPhone={actions.setPhone} />
+                        <UserProfile routing="virtual" />
+                    </div>
+                );
         }
     };
 
     return (
         <div className="flex h-screen bg-gray-100">
+            {badge && <BadgeModal badge={badge.data} justCheckedIn={badge.justCheckedIn} onClose={() => setBadge(null)} />}
             {newAppointment && (
                 <AppointmentConfirmationModal appointment={newAppointment} onClose={() => setNewAppointment(null)} />
             )}

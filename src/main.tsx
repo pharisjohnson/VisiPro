@@ -1,10 +1,11 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { ClerkProvider, useAuth } from '@clerk/clerk-react';
-import { ConvexReactClient } from 'convex/react';
+import { ConvexProvider, ConvexReactClient } from 'convex/react';
 import { ConvexProviderWithClerk } from 'convex/react-clerk';
 import App from './App';
 import { SetupNotice } from './components/SetupNotice';
+import { KioskApp } from './kiosk/KioskApp';
 import './index.css';
 
 const convexUrl = import.meta.env.VITE_CONVEX_URL as string | undefined;
@@ -16,7 +17,18 @@ if (!rootElement) {
 }
 const root = ReactDOM.createRoot(rootElement);
 
-if (!convexUrl || !clerkKey) {
+// Public self-check-in: /k/<secret token>. No sign-in, so Clerk isn't loaded at all.
+const kioskToken = window.location.pathname.match(/^\/k\/([A-Za-z0-9_-]{20,100})\/?$/)?.[1];
+
+if (kioskToken && convexUrl) {
+  root.render(
+    <React.StrictMode>
+      <ConvexProvider client={new ConvexReactClient(convexUrl)}>
+        <KioskApp token={kioskToken} />
+      </ConvexProvider>
+    </React.StrictMode>
+  );
+} else if (!convexUrl || !clerkKey) {
   root.render(<SetupNotice missing={[!convexUrl && 'VITE_CONVEX_URL', !clerkKey && 'VITE_CLERK_PUBLISHABLE_KEY'].filter(Boolean) as string[]} />);
 } else {
   const convex = new ConvexReactClient(convexUrl);

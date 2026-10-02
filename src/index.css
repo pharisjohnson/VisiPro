@@ -5,3 +5,12 @@
 body {
   @apply bg-gray-50;
 }
+
+/* Printing: show only the element marked .print-area (visitor badge, kiosk poster). */
+@page badge { size: 4in 3in; margin: 0.15in; }
+@media print {
+  body * { visibility: hidden; }
+  .print-area, .print-area * { visibility: visible; }
+  .print-area { position: absolute; left: 0; top: 0; width: 100%; box-shadow: none; }
+  .badge-print { page: badge; }
+}

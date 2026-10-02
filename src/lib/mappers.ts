@@ -20,6 +20,7 @@ export const toMember = (m: Doc<'members'>): Member => ({
     email: m.email,
     role: ROLES[m.role],
     photoUrl: m.photoUrl,
+    phone: m.phone,
 });
 
 export const toVisitor = (v: Doc<'visitors'>): Visitor => ({
@@ -32,6 +33,8 @@ export const toVisitor = (v: Doc<'visitors'>): Visitor => ({
     checkInTime: new Date(v.checkInTime),
     checkOutTime: v.checkOutTime ? new Date(v.checkOutTime) : undefined,
     status: v.status === 'in' ? VisitorStatus.CHECKED_IN : VisitorStatus.CHECKED_OUT,
+    source: v.source,
+    autoCheckedOut: v.autoCheckedOut,
     extraData: v.extraData,
 });
 
@@ -43,6 +46,7 @@ export const toAppointment = (a: Doc<'appointments'>): Appointment => ({
     hostUserId: a.hostUserId,
     scheduledTime: new Date(a.scheduledTime),
     checkInCode: a.checkInCode,
+    visitorPhone: a.visitorPhone,
     status: a.status,
 });
 
@@ -52,6 +56,7 @@ export const toEmployee = (e: Doc<'employees'>): Employee => ({
     checkInTime: new Date(e.checkInTime),
     checkOutTime: e.checkOutTime ? new Date(e.checkOutTime) : undefined,
     status: e.status === 'in' ? EmployeeStatus.CHECKED_IN : EmployeeStatus.CHECKED_OUT,
+    autoCheckedOut: e.autoCheckedOut,
     extraData: e.extraData,
 });
 

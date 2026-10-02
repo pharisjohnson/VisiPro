@@ -87,8 +87,9 @@ export interface VisitorLogProps {
     visitors: Visitor[];
     checkOutVisitor: (id: string) => void;
     customFields: CustomField[];
+    onPrintBadge?: (visitor: Visitor) => void;
 }
-export const VisitorLog: React.FC<VisitorLogProps> = ({ visitors, checkOutVisitor, customFields }) => {
+export const VisitorLog: React.FC<VisitorLogProps> = ({ visitors, checkOutVisitor, customFields, onPrintBadge }) => {
     const { items, requestSort, sortConfig } = useSortableData(visitors);
     return (
         <div className="overflow-x-auto">
@@ -109,7 +110,7 @@ export const VisitorLog: React.FC<VisitorLogProps> = ({ visitors, checkOutVisito
                 <tbody className="bg-white divide-y divide-gray-200">
                     {items.length > 0 ? items.map((visitor) => (
                         <tr key={visitor.id}>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{visitor.name}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{visitor.name}{visitor.source === 'kiosk' && <span className="ml-2 text-xs font-normal text-gray-400" title="Checked in by the visitor on the self check-in page">self</span>}</td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{visitor.company || '—'}</td>
                             {customFields.map(field => (
                                 <td key={field.id} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{visitor.extraData[field.key] || 'N/A'}</td>
@@ -120,8 +121,10 @@ export const VisitorLog: React.FC<VisitorLogProps> = ({ visitors, checkOutVisito
                                 <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${visitor.status === VisitorStatus.CHECKED_IN ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                                     {visitor.status}
                                 </span>
+                                {visitor.autoCheckedOut && <span className="ml-2 text-xs text-gray-400" title="Closed automatically because nobody checked them out">auto</span>}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-4">
+                                {onPrintBadge && <button onClick={() => onPrintBadge(visitor)} className="text-gray-600 hover:text-gray-900">Badge</button>}
                                 {visitor.status === VisitorStatus.CHECKED_IN && (
                                     <button onClick={() => checkOutVisitor(visitor.id)} className="text-indigo-600 hover:text-indigo-900">Check Out</button>
                                 )}
@@ -169,6 +172,7 @@ export const EmployeeLog: React.FC<EmployeeLogProps> = ({ employees, checkOutEmp
                                 <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${employee.status === EmployeeStatus.CHECKED_IN ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                                     {employee.status}
                                 </span>
+                                {employee.autoCheckedOut && <span className="ml-2 text-xs text-gray-400" title="Closed automatically because nobody checked them out">auto</span>}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                 {employee.status === EmployeeStatus.CHECKED_IN && (
@@ -226,6 +230,7 @@ export interface LogsPageProps {
     visitorCustomFields: CustomField[];
     employeeCustomFields: CustomField[];
     currentUser: User;
+    onPrintBadge?: (visitor: Visitor) => void;
 }
 export const LogsPage: React.FC<LogsPageProps> = (props) => {
     const toast = useToast();
@@ -282,7 +287,7 @@ export const LogsPage: React.FC<LogsPageProps> = (props) => {
                             link.click();
                         }}
                     />
-                    <VisitorLog visitors={filteredVisitors} checkOutVisitor={props.checkOutVisitor} customFields={props.visitorCustomFields} />
+                    <VisitorLog visitors={filteredVisitors} checkOutVisitor={props.checkOutVisitor} customFields={props.visitorCustomFields} onPrintBadge={props.onPrintBadge} />
                 </>
             )} 
             {activeTab === 'employees' && !isHost && (
